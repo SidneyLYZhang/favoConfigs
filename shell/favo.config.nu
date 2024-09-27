@@ -62,7 +62,7 @@ def clearall [] {
     rm -r -f '...\FirefoxCache\cache2'
     rm -r -f 'C:\Users\<you>\AppData\Local\Microsoft\Edge\User Data\Default\Cache\Cache_Data'
     rm -r -f 'C:\Users\<you>\AppData\Local\Microsoft\Edge\User Data\Default\Code Cache'
-    clear -a
+    clear
 }
 
 #### 快速git push
@@ -77,6 +77,48 @@ def gitquick [
     } else {
         git push -u origin main
     }
+}
+
+#### 数据加密同步
+def "syncdata push" [
+    folder:string,
+    --usexfile(-x)
+] {
+    if ($usexfile) {
+        restic -r rclone:obs:wkup --verbose backup $folder --exclude-file=excludes.txt
+    } else {
+        restic -r rclone:obs:wkup --verbose backup $folder
+    }
+}
+
+def "syncdata pull" [
+    name:string,
+    tofolder:string
+] {
+    restic -r rclone:obs:wkup restore $name --target $tofolder
+}
+
+def "syncdata ls" [
+    --name(-n):string
+] {
+    if ($name) {
+        restic -r rclone:obs:wkup ls $name
+    } else {
+        restic -r rclone:obs:wkup snapshots
+    }
+}
+
+def "syncdata rm" [
+    name:string
+] {
+    restic -r rclone:obs:wkup forget $name --prune
+}
+
+def syncdata [] {
+    print ("`push` `pull` `ls` `rm` is all your need...")
+    restic version
+    print ("https://restic.readthedocs.io/en/stable/index.html")
+    rclone --version
 }
 
 # quickly change Path
