@@ -99,26 +99,30 @@ def "syncdata pull" [
 }
 
 def "syncdata ls" [
-    --name(-n):string
+    name?:string
 ] {
-    if ($name) {
-        restic -r rclone:obs:wkup ls $name
-    } else {
+    if ($name == null) {
         restic -r rclone:obs:wkup snapshots
+    } else {
+        restic -r rclone:obs:wkup ls $name
     }
 }
 
 def "syncdata rm" [
-    name:string
+    name?:string
 ] {
-    restic -r rclone:obs:wkup forget $name --prune
+    if ($name == null) {
+        restic -r rclone:obs:wkup forget --keep-monthly 1
+    } else {
+        restic -r rclone:obs:wkup forget $name --prune   
+    }
 }
 
 def syncdata [] {
     print ("`push` `pull` `ls` `rm` is all your need...")
     restic version
-    print ("https://restic.readthedocs.io/en/stable/index.html")
     rclone --version
+    print ("DOC : https://restic.readthedocs.io/en/stable/index.html")
 }
 
 # quickly change Path
