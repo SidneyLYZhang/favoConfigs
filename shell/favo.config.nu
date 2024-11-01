@@ -56,15 +56,6 @@ def setconfig [
     }
 }
 
-#### 清理必要垃圾
-def clearall [] {
-    history -c
-    rm -r -f '...\FirefoxCache\cache2'
-    rm -r -f 'C:\Users\<you>\AppData\Local\Microsoft\Edge\User Data\Default\Cache\Cache_Data'
-    rm -r -f 'C:\Users\<you>\AppData\Local\Microsoft\Edge\User Data\Default\Code Cache'
-    clear
-}
-
 #### 快速git push
 def gitquick [
     commits:string,
@@ -112,9 +103,9 @@ def "syncdata rm" [
     name?:string
 ] {
     if ($name == null) {
-        restic -r rclone:obs:wkup forget --keep-monthly 1
+        restic -r rclone:obs:wkup forget --keep-monthly 1 --prune
     } else {
-        restic -r rclone:obs:wkup forget $name --prune   
+        restic -r rclone:obs:wkup forget $name --prune 
     }
 }
 
@@ -127,7 +118,7 @@ def syncdata [] {
 
 # quickly change Path
 
-alias work = cd 'E:\WorkPlace'
+alias work = cd 'E:\WorkPlace\01_Working'
 alias coding = cd 'E:\WorkPlace\00_Coding'
 alias appdata = cd 'C:\Users\<you>\AppData'
 
@@ -135,3 +126,4 @@ alias appdata = cd 'C:\Users\<you>\AppData'
 
 alias weeknum = print (date now | format date '%W')
 alias setvenv = overlay use .venv\Scripts\activate.nu
+alias unsetvenv = deactivate
