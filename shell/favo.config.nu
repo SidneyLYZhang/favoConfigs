@@ -32,6 +32,17 @@ def setsymlink [
         pwsh -c $doing
 }
 
+#### Scoop检查并更新
+def checkscoop [] {
+    scoop update
+    let xx = (scoop status | str contains "Everything is ok!")
+    if ($xx) {
+        $"(ansi purple_bold)Everything of scoop is ok!(ansi reset)"
+    } else {
+        sudo scoop update -a -g
+    }
+}
+
 #### 快速设置或取消设置代理
 def setconfig [
     name:string,
@@ -58,15 +69,27 @@ def setconfig [
 
 #### 快速git push
 def gitquick [
-    commits:string,
+    commits:string = "auto",
     --old(-o)
 ] {
     git add -A
-    git commit -m $commits
-    if ($old) {
-        git push -u origin master
-    } else {
-        git push -u origin main
+    if ($commits == "auto") {
+        oco
+    } else if ($commits == "date") {
+        let dnow = date now | format date '%Y-%m-%d'
+        git commit -m $dnow
+        if ($old) {
+            git push -u origin master
+        } else {
+            git push -u origin main
+        }
+    }  else {
+        git commit -m $commits
+        if ($old) {
+            git push -u origin master
+        } else {
+            git push -u origin main
+        }
     }
 }
 
