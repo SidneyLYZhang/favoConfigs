@@ -43,6 +43,13 @@ def checkscoop [] {
     }
 }
 
+#### 更新工具-经常很久才用一次
+def updatetools [] {
+    rustup update
+    cargo install-update --all
+    pipx upgrade-all
+}
+
 #### 快速设置或取消设置代理
 def setconfig [
     name:string,
