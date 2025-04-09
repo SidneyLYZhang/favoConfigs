@@ -146,6 +146,30 @@ def syncdata [] {
     print ("DOC : https://restic.readthedocs.io/en/stable/index.html")
 }
 
+#### 快速打开文件夹
+def "qopen code" [] {
+    # coding文件夹
+    explorer 'E:\WorkPlace\00_Coding'
+}
+
+def "qopen youtube" [
+    ziel:string = "data"
+] {
+    # YouTube月报文件夹
+    let lmonth = date now | format date "%Y-%m-01" | into datetime | $in - 1day | format date "%Y%m"
+    let keypath = "E:\\WorkPlace\\01_WORKING\\03_YouTube"
+    if ($ziel in ["data" "Report"]) {
+        explorer ([$keypath $ziel $lmonth] | path join)
+    } else {
+        explorer 'E:\WorkPlace\01_WORKING\03_YouTube\'
+    }
+}
+
+def qopen [] {
+    # 当前文件夹
+    explorer '.'
+}
+
 # quickly change Path
 
 alias work = cd 'E:\WorkPlace\01_Working'
