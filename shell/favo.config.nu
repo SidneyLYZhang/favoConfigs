@@ -171,6 +171,35 @@ def "qopen youtube" [
     }
 }
 
+# 打开结算文件夹
+def "qopen jiesuan" [
+    ziel:string = "y2b" # 目标文件夹[y2b，YSP，steam，epic]，不使用这两个名称，则打开主文件夹
+    --ok(-o) # 直接打开结果文件夹
+] {
+    let lmonth = date now | format date "%Y-%m-01" | into datetime | $in - 1day | format date "%Y%m"
+    let tmonth = date now | format date "%Y%m"
+    let keypath = "E:\\WorkPlace\\01_WORKING\\04_Settlements"
+    if ($ziel in ["y2b" "YSP"]) {
+        if ($ziel == "y2b") {
+            if ($ok) {
+                explorer ([$keypath "data" $lmonth] | path join)
+            } else {
+                explorer ([$keypath "data" "YouTube" $lmonth] | path join)
+            }
+        } else {
+            if ($ok) {
+                explorer ([$keypath "央视频" $tmonth] | path join)
+            } else {
+                explorer ([$keypath "央视频"] | path join)
+            }
+        }
+    } else if ($ziel in ["steam" "epic"]) {
+        explorer ([$keypath "data" ($ziel | str capitalize)] | path join)
+    } else {
+        explorer 'E:\WorkPlace\01_WORKING\04_Settlements'
+    }
+}
+
 # 常用文件夹快捷打开工具
 def qopen [
     --info(-i) # 展示信息
@@ -180,10 +209,11 @@ def qopen [
         print ("\t -> `qopen` | 打开当前文件夹")
         print ("\t -> `qopen code` | 打开代码文件夹")
         print ("\t -> `qopen download` | 打开下载文件夹")
+        print ("\t -> `qopen jiesuan [y2b，YSP，steam，epic]` | 打开结算工作文件夹")
         print ("\t -> `qopen youtube [data,Report,null]` | 打开当月youtube月报文件夹")
         print ("\t -> `qopen --help` | 显示帮助")
         print ("\t -> `qopen --info(-i)` | 显示基本信息")
-        print ("\n Version 20250411 (C) SidneyZhang<zly@lyzhang.me>")
+        print ("\n Version 20250416 (C) SidneyZhang<zly@lyzhang.me>")
     } else {
         explorer '.'
     }
