@@ -76,27 +76,21 @@ def setconfig [
 
 #### 快速git push
 def gitquick [
-    commits:string = "auto",
-    --old(-o)
+    commits: string = "auto"
 ] {
     git add -A
-    if ($commits == "auto") {
+    
+    if $commits == "auto" {
         oco
-    } else if ($commits == "date") {
+    } else if $commits == "date" {
         let dnow = date now | format date '%Y-%m-%d'
         git commit -m $dnow
-        if ($old) {
-            git push -u origin master
-        } else {
-            git push -u origin main
-        }
-    }  else {
+        let current_branch = (git rev-parse --abbrev-ref HEAD)
+        git push -u origin $current_branch
+    } else {
         git commit -m $commits
-        if ($old) {
-            git push -u origin master
-        } else {
-            git push -u origin main
-        }
+        let current_branch = (git rev-parse --abbrev-ref HEAD)
+        git push -u origin $current_branch
     }
 }
 

@@ -85,33 +85,29 @@ function setconfig {
 #### 快速git push
 function gitquick {
     param(
-        [string]$commits = "auto",
-        [switch]$old
+        [string]$commits = "auto"
     )
-    
+
     git add -A
+    
     if ($commits -eq "auto") {
         oco
-    } elseif ($commits -eq "date") {
+    }
+    elseif ($commits -eq "date") {
         $dnow = Get-Date -Format "yyyy-MM-dd"
         git commit -m $dnow
-        if ($old) {
-            git push -u origin master
-        } else {
-            git push -u origin main
-        }
-    } else {
+        $currentBranch = git rev-parse --abbrev-ref HEAD
+        git push -u origin $currentBranch
+    }
+    else {
         git commit -m $commits
-        if ($old) {
-            git push -u origin master
-        } else {
-            git push -u origin main
-        }
+        $currentBranch = git rev-parse --abbrev-ref HEAD
+        git push -u origin $currentBranch
     }
 }
 
 #### 数据加密同步
-function syncdata-push {
+function Sync-push {
     param(
         [string]$folder,
         [switch]$usexfile
@@ -124,7 +120,7 @@ function syncdata-push {
     }
 }
 
-function syncdata-pull {
+function Sync-pull {
     param(
         [string]$name,
         [string]$tofolder
@@ -132,7 +128,7 @@ function syncdata-pull {
     restic -r rclone:obs:wkup restore $name --target $tofolder
 }
 
-function syncdata-ls {
+function Sync-ls {
     param(
         [string]$name
     )
@@ -143,7 +139,7 @@ function syncdata-ls {
     }
 }
 
-function syncdata-rm {
+function Sync-rm {
     param(
         [string]$name
     )
@@ -154,7 +150,7 @@ function syncdata-rm {
     }
 }
 
-function syncdata {
+function Sync {
     Write-Host "`push` `pull` `ls` `rm` is all your need..."
     restic version
     rclone --version
@@ -164,17 +160,17 @@ function syncdata {
 #### 快速打开文件夹
 
 # 打开代码文件夹
-function qopen-code {
+function Quickopen-Code {
     explorer 'E:\WorkPlace\00_Coding'
 }
 
 # 打开下载文件夹
-function qopen-download {
+function Open-Download {
     explorer 'D:\Downloads'
 }
 
 # 打开YouTube月报文件夹
-function qopen-youtube {
+function Quickopen-Youtube {
     param(
         [string]$ziel = "data"
     )
@@ -188,7 +184,7 @@ function qopen-youtube {
 }
 
 # 打开结算文件夹
-function qopen-jiesuan {
+function Quickopen-Jiesuan {
     param(
         [string]$ziel = "y2b",
         [switch]$ok
@@ -218,7 +214,7 @@ function qopen-jiesuan {
 }
 
 # 常用文件夹快捷打开工具
-function qopen {
+function Quickopen {
     param(
         [switch]$info
     )
