@@ -14,8 +14,8 @@
     PrivateData = @{
         PSData = @{
             Tags = @('Navigation', 'Directory', 'Productivity', 'Utility')
-            LicenseUri = ''
-            ProjectUri = ''
+            LicenseUri = 'https://github.com/SidneyLYZhang/favoConfigs/blob/main/LICENSE'
+            ProjectUri = 'https://github.com/SidneyLYZhang/favoConfigs/tree/main/shell/favo.powershell/Modules/FastGo'
             ReleaseNotes = 'v1.2.0 - 优化函数命名'
         }
     }

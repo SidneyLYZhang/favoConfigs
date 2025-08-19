@@ -4,38 +4,46 @@ Invoke-Expression (&starship init powershell)
 $env:Path += ";\WorkPlace\...\dosync"
 
 # Function
-#### 你能信？普通公司也要高压内部数据安全……
-function usefull {
-    param(
-        [string]$name,
-        [switch]$sync
-    )
-    
-    if ($name -eq "up") {
-        python '\...\decompression.py'
-        if ($sync) {
-            Start-Process -WindowStyle Hidden -WorkingDirectory "\WorkPlace\...\dosync" -FilePath ".\syncthing.exe"
-        }
-    } elseif ($name -eq "down") {
-        if ($sync) {
-            Remove-Item -Force -Recurse '\WorkPlace\...\dosync'
-            Remove-Item -Force -Recurse '\WorkPlace\...\vback'
-        } else {
-            python '\...\compression.py'
-        }
-        Clear-History
-    } else {
-        Write-Host "For what?"
-    }
-}
-
 #### 快速设置软链接
 function setsymlink {
     param(
+        [Parameter(Mandatory=$true, Position=0)]
         [string]$name,
-        [string]$target
+        [Parameter(Mandatory=$true, Position=1)]
+        [string]$target,
+        [switch]$force,
+        [switch]$verbose
     )
-    New-Item -Path $name -ItemType SymbolicLink -Target $target
+    
+    try {
+        # 检查目标路径是否存在
+        if (-not (Test-Path $target)) {
+            Write-Error "目标路径不存在: $target"
+            return $false
+        }
+        
+        # 如果已存在同名文件/文件夹，根据-force参数决定是否删除
+        if (Test-Path $name) {
+            if ($force) {
+                if ($verbose) { Write-Host "已存在，正在删除: $name" -ForegroundColor Yellow }
+                Remove-Item -Path $name -Recurse -Force
+            } else {
+                Write-Error "已存在同名文件/文件夹: $name (使用 -force 参数覆盖)"
+                return $false
+            }
+        }
+        
+        # 创建符号链接
+        if ($verbose) { Write-Host "正在创建符号链接: $name -> $target" -ForegroundColor Green }
+        $result = New-Item -Path $name -ItemType SymbolicLink -Target $target -Force
+        
+        if ($verbose) { Write-Host "成功创建符号链接" -ForegroundColor Green }
+        return $true
+    }
+    catch {
+        Write-Error "创建符号链接失败: $($_.Exception.Message)"
+        return $false
+    }
 }
 
 #### Scoop检查并更新
@@ -59,27 +67,118 @@ function updatetools {
 #### 快速设置或取消设置代理
 function setconfig {
     param(
-        [string]$name,
-        [switch]$unset
+        [Parameter(Mandatory=$true, Position=0)]
+        [ValidateSet("git", "scoop", "npm", "yarn", "pip", "all")]
+        [string]$tool,
+        [string]$proxy = "127.0.0.1:2334",
+        [switch]$unset,
+        [switch]$list,
+        [switch]$verbose
     )
     
-    if ($name -eq "git") {
-        if ($unset) {
-            git config --global --unset http.proxy
-        } else {
-            git config --global http.proxy http://127.0.0.1:2334
-        }
-        Write-Host "Done!"
-    } elseif ($name -eq "scoop") {
-        if ($unset) {
-            scoop config rm proxy
-        } else {
-            scoop config proxy 127.0.0.1:2334
-        }
-        Write-Host "Done!"
-    } else {
-        Write-Host "Are you CRAZY?"
+    $proxyUrl = if ($proxy -match "^http://") { $proxy } else { "http://$proxy" }
+    $tools = @()
+    
+    if ($list) {
+        Write-Host "支持的代理工具: git, scoop, npm, yarn, pip, all" -ForegroundColor Cyan
+        Write-Host "默认代理地址: 127.0.0.1:2334" -ForegroundColor Gray
+        return
     }
+    
+    if ($tool -eq "all") {
+        $tools = @("git", "scoop", "npm", "yarn", "pip")
+    } else {
+        $tools = @($tool)
+    }
+    
+    $results = @()
+    
+    foreach ($t in $tools) {
+        try {
+            switch ($t) {
+                "git" {
+                    if ($unset) {
+                        git config --global --unset http.proxy 2>$null
+                        git config --global --unset https.proxy 2>$null
+                        $results += @{Tool="Git"; Status="已取消"; Message="HTTP/HTTPS代理已移除"}
+                        if ($verbose) { Write-Host "✓ Git代理已取消" -ForegroundColor Green }
+                    } else {
+                        git config --global http.proxy $proxyUrl
+                        git config --global https.proxy $proxyUrl
+                        $results += @{Tool="Git"; Status="已设置"; Message="代理: $proxyUrl"}
+                        if ($verbose) { Write-Host "✓ Git代理已设置: $proxyUrl" -ForegroundColor Green }
+                    }
+                }
+                "scoop" {
+                    if ($unset) {
+                        scoop config rm proxy 2>$null
+                        $results += @{Tool="Scoop"; Status="已取消"; Message="代理已移除"}
+                        if ($verbose) { Write-Host "✓ Scoop代理已取消" -ForegroundColor Green }
+                    } else {
+                        scoop config proxy $proxy
+                        $results += @{Tool="Scoop"; Status="已设置"; Message="代理: $proxy"}
+                        if ($verbose) { Write-Host "✓ Scoop代理已设置: $proxy" -ForegroundColor Green }
+                    }
+                }
+                "npm" {
+                    if ($unset) {
+                        npm config delete proxy 2>$null
+                        npm config delete https-proxy 2>$null
+                        $results += @{Tool="NPM"; Status="已取消"; Message="代理已移除"}
+                        if ($verbose) { Write-Host "✓ NPM代理已取消" -ForegroundColor Green }
+                    } else {
+                        npm config set proxy $proxyUrl
+                        npm config set https-proxy $proxyUrl
+                        $results += @{Tool="NPM"; Status="已设置"; Message="代理: $proxyUrl"}
+                        if ($verbose) { Write-Host "✓ NPM代理已设置: $proxyUrl" -ForegroundColor Green }
+                    }
+                }
+                "yarn" {
+                    if ($unset) {
+                        yarn config delete proxy 2>$null
+                        yarn config delete https-proxy 2>$null
+                        $results += @{Tool="Yarn"; Status="已取消"; Message="代理已移除"}
+                        if ($verbose) { Write-Host "✓ Yarn代理已取消" -ForegroundColor Green }
+                    } else {
+                        yarn config set proxy $proxyUrl
+                        yarn config set https-proxy $proxyUrl
+                        $results += @{Tool="Yarn"; Status="已设置"; Message="代理: $proxyUrl"}
+                        if ($verbose) { Write-Host "✓ Yarn代理已设置: $proxyUrl" -ForegroundColor Green }
+                    }
+                }
+                "pip" {
+                    if ($unset) {
+                        # 检查并移除pip代理配置
+                        $pipConfigPath = "$env:APPDATA\pip\pip.ini"
+                        if (Test-Path $pipConfigPath) {
+                            $content = Get-Content $pipConfigPath -Raw
+                            if ($content -match "proxy") {
+                                $content = $content -replace "proxy\s*=\s*.*", ""
+                                $content | Set-Content $pipConfigPath
+                            }
+                        }
+                        $results += @{Tool="Pip"; Status="已取消"; Message="代理配置已移除"}
+                        if ($verbose) { Write-Host "✓ Pip代理已取消" -ForegroundColor Green }
+                    } else {
+                        pip config set global.proxy $proxyUrl
+                        $results += @{Tool="Pip"; Status="已设置"; Message="代理: $proxyUrl"}
+                        if ($verbose) { Write-Host "✓ Pip代理已设置: $proxyUrl" -ForegroundColor Green }
+                    }
+                }
+            }
+        }
+        catch {
+            $results += @{Tool=$t.ToUpper(); Status="失败"; Message=$_.Exception.Message}
+            Write-Error "$t 代理设置失败: $($_.Exception.Message)"
+        }
+    }
+    
+    # 简洁输出
+    if (-not $verbose) {
+        $results | Format-Table Tool, Status, Message -AutoSize | Out-Host
+    }
+    
+    return $results
 }
 
 #### 快速git push
