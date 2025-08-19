@@ -1,35 +1,92 @@
 # ENVIRONMENT
-$env.Path = ($env.Path | append '\WorkPlace\...\dosync')
+# $env.Path = ($env.Path | append '\WorkPlace\...\dosync')
 
 # Function
-#### 你能信？普通公司也要高压内部数据安全……
-def usefull [
-    name:string,
-    --sync(-s)] {
-    if ($name == "up") {
-        python '\...\decompression.py'
-        if ($sync) {
-            pwsh -noprofile -c 'Start-Process -WindowStyle Hidden -WorkingDirectory "\WorkPlace\...\dosync" ".\syncthing.exe"'
-        }
-    } else if ($name == "down") {
-        if ($sync) {
-            rm -f -r '\WorkPlace\...\dosync'
-            rm -f -r '\WorkPlace\...\vback'
-        } else {
-            python '\...\compression.py'
-        }
-        history -c
-    } else {
-        print ("For what?")
-    }
-}
 
-#### 快速设置软链接
-def setsymlink [
+#### 快速设置软链接 - 跨平台版本
+def setsoftlink [
     name:string,
-    target:string] {
-        let doing = $'New-Item ($name) -ItemType SymbolicLink -Target "($target)"' 
-        pwsh -c $doing
+    target:string,
+    --hard(-h)
+] {
+    # 验证目标路径是否存在
+    if not ($target | path exists) {
+        print $"(ansi red)错误: 目标路径 '($target)' 不存在(ansi reset)"
+        return
+    }
+    
+    # 规范化路径
+    let target_abs = ($target | path expand)
+    let link_name = ($name | path expand)
+    
+    # 检查是否已存在同名文件/链接
+    if ($link_name | path exists) {
+        let item_type = if ($link_name | path type) == "dir" { "目录" } else { "文件" }
+        print $"(ansi yellow)警告: ($item_type) '($name)' 已存在(ansi reset)"
+        
+        # 检查是否已经是符号链接
+        try {
+            let link_target = (ls -l $link_name | get target.0)
+            if not ($link_target | is-empty) {
+                print $"(ansi cyan)信息: 该路径已是指向 '($link_target)' 的符号链接(ansi reset)"
+                return
+            }
+        }
+        
+        return
+    }
+    
+    # 确保父目录存在
+    let parent_dir = ($link_name | path dirname)
+    if not ($parent_dir | path exists) {
+        print $"(ansi yellow)创建父目录: ($parent_dir)(ansi reset)"
+        mkdir $parent_dir
+    }
+    
+    # 获取当前操作系统
+    let os = (uname)
+    
+    # 根据操作系统类型创建符号链接
+    try {
+        if $hard {
+            # 硬链接创建
+            if $os == "Windows" {
+                # Windows 硬链接
+                mklink /H $link_name $target_abs
+            } else {
+                # Linux/macOS 硬链接
+                ^ln -P $target_abs $link_name
+            }
+        } else {
+            # 符号链接创建
+            if $os == "Windows" {
+                # Windows 符号链接
+                let is_dir = ($target_abs | path type) == "dir"
+                if $is_dir {
+                    mklink /D $link_name $target_abs
+                } else {
+                    mklink $link_name $target_abs
+                }
+            } else {
+                # Linux/macOS 符号链接
+                let is_dir = ($target_abs | path type) == "dir"
+                if $is_dir {
+                    ^ln -s $target_abs $link_name
+                } else {
+                    ^ln -s $target_abs $link_name
+                }
+            }
+        }
+        
+        print $"(ansi green)成功: 创建符号链接(ansi reset)"
+        print $"  源: ($link_name)"
+        print $"  目标: ($target_abs)"
+        print $"  类型: (if $hard { "硬链接" } else { "符号链接" })"
+        print $"  系统: ($os)"
+    } catch {
+        print $"(ansi red)错误: 创建符号链接失败(ansi reset)"
+        print $"  错误信息: ($in)"
+    }
 }
 
 #### Scoop检查并更新
