@@ -257,4 +257,61 @@ function Add-JumpFunction {
     Write-Host "已注册全局函数：global:$Name -> $resolvedPath" -ForegroundColor Green
 }
 
-Export-ModuleMember -Function Enter-Venv, Exit-Venv, New-ApiKey, Add-JumpFunction
+function Update-Scoop {
+    <#
+    .SYNOPSIS
+        检查并更新 Scoop 包管理器
+        
+    .DESCRIPTION
+        检查 Scoop 状态并执行必要的更新操作
+        # 设置函数别名以便快速调用
+        # Set-Alias -Name checkscoop -Value Update-Scoop
+        # Set-Alias -Name scoop-update -Value Update-Scoop
+        
+    .EXAMPLE
+        Update-Scoop
+        
+    .EXAMPLE
+        Update-Scoop -Verbose
+    #>
+    
+    [CmdletBinding()]
+    param()
+    
+    try {
+        Write-Verbose "正在更新 Scoop 仓库信息..."
+        $updateResult = scoop update 2>&1
+        
+        Write-Verbose "检查 Scoop 状态..."
+        $status = scoop status 2>&1
+        
+        if ($status -match "Everything is ok!") {
+            Write-Host "✅ $(Get-Date -Format 'HH:mm:ss') - Scoop 状态正常，无需更新" -ForegroundColor Green
+            return $true
+        } else {
+            Write-Warning "Scoop 需要更新，正在执行全局更新..."
+            
+            # 检查是否在管理员权限下运行
+            if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+                Write-Warning "需要管理员权限执行全局更新，请使用管理员模式运行 PowerShell"
+                return $false
+            }
+            
+            $globalUpdate = scoop update -a -g 2>&1
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "✅ $(Get-Date -Format 'HH:mm:ss') - Scoop 全局更新完成" -ForegroundColor Green
+                return $true
+            } else {
+                Write-Error "Scoop 更新失败，错误代码: $LASTEXITCODE"
+                Write-Error $globalUpdate
+                return $false
+            }
+        }
+    }
+    catch {
+        Write-Error "执行 Scoop 检查时发生错误: $($_.Exception.Message)"
+        return $false
+    }
+}
+
+Export-ModuleMember -Function Enter-Venv, Exit-Venv, New-ApiKey, Add-JumpFunction, Update-Scoop

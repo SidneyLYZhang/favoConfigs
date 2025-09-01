@@ -78,6 +78,29 @@ proj              # 立即跳转到 C:\Code\MyProject
 Add-JumpFunction -Name proj -Path 'D:\NewProject' -Force
 ```
 
+### 4. Scoop 包管理器更新
+
+#### Update-Scoop
+检查并更新 Scoop 包管理器，自动处理更新流程。
+
+- **状态检查**：自动检测 Scoop 是否需要更新
+- **智能更新**：仅在需要时执行更新操作
+- **权限管理**：检查管理员权限，确保全局更新成功
+- **详细反馈**：提供清晰的更新状态和错误信息
+
+**使用示例：**
+```powershell
+# 检查并更新 Scoop
+Update-Scoop
+
+# 查看详细更新过程
+Update-Scoop -Verbose
+```
+
+**注意事项**：
+- 确保已安装 Scoop 包管理器
+- 建议在 PowerShell 管理员权限下运行
+
 ## 安装使用
 
 1. 将模块文件放置在 PowerShell 模块目录下
