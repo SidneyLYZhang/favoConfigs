@@ -12,27 +12,39 @@ windows一般已经自带。无需安装。直接使用命令行进行使用。
 
 使用 `winget settings` 打开配置文件。
 
-我的常用配置：
+我的常用配置，又做了一些优化：
 
 ```json
 {
     "$schema": "https://aka.ms/winget-settings.schema.json",
+    // For documentation on these settings, see: https://aka.ms/winget-settings
+    "source": {
+       "autoUpdateIntervalInMinutes": 30
+    },
     "visual": {
         "enableSixels": true,
         "progressBar": "rainbow"
     },
     "experimentalFeatures": {
         "experimentalARG": true,
-        "experimentalCMD": true
+        "experimentalCMD": true,
+        "fonts": true
     },
     "downloadBehavior": {
         "defaultDownloadDirectory": "D:/Downloads/WINGET"
     },
     "installBehavior": {
-        "defaultInstallRoot": "D:/Configs/WinGetApps/Default",
-        "portablePackageUserRoot": "D:/Configs/WinGetApps/Portable/User",
-        "portablePackageMachineRoot": "D:/Configs/WinGetApps/Portable/Machine"
+        "defaultInstallRoot": "D:/LYZConfigs/WinGetApps/Default",
+        "portablePackageUserRoot": "D:/LYZConfigs/WinGetApps/Portable/User",
+        "portablePackageMachineRoot": "D:/LYZConfigs/WinGetApps/Portable/Machine",
+        "preferences": {
+            "scope": "user"
+        }
+    },
+    "configureBehavior": {
+        "defaultModuleRoot": "D:/LYZConfigs/WinGetApps/Modules"
     }
+}
 ```
 
 ## 使用
