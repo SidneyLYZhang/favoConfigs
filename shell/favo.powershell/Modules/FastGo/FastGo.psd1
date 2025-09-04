@@ -1,7 +1,7 @@
 @{
     RootModule = 'FastGo.psm1'
     ModuleVersion = '1.2.0'
-    GUID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+    GUID = '425cee35-8f7e-498a-b5a5-0bf55a9c1f38'
     Author = 'Sidney Zhang'
     CompanyName = 'Sidney Zhang'
     Copyright = '(c) 2025 Sidney Zhang. All rights reserved.'
