@@ -1,0 +1,8 @@
+[project]
+name = "genfotos"
+version = "0.1.0"
+description = "Using nano-banana to generate a PPT schematic picture"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+dependencies = []
