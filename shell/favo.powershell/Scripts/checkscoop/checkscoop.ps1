@@ -14,9 +14,6 @@
 .PARAMETER Verbose
     显示详细的执行过程信息
 
-.PARAMETER Force
-    强制更新所有包，即使状态正常
-
 .PARAMETER NoGlobal
     跳过全局包的更新，只更新用户包
 
@@ -27,10 +24,6 @@
 .EXAMPLE
     .\checkscoop.ps1 -Verbose
     显示详细信息的检查更新
-
-.EXAMPLE
-    .\checkscoop.ps1 -Force
-    强制更新所有包
 
 .EXAMPLE
     .\checkscoop.ps1 -NoGlobal
@@ -44,7 +37,7 @@
     更新时间: 2025-09-04
 
 .LINK
-    https://github.com/SidneyLYZhang/favoConfigs/shell/favo.powershell/Scripts/checkscoop
+    https://github.com/SidneyLYZhang/favoConfigs/tree/main/shell/favo.powershell/Scripts/checkscoop
 #>
 
 [CmdletBinding()]
@@ -52,9 +45,6 @@ param(
     [Parameter()]
     [Alias("h", "?")]
     [switch]$Help,
-
-    [Parameter()]
-    [switch]$Force,
 
     [Parameter()]
     [switch]$NoGlobal
@@ -88,7 +78,6 @@ function Test-Administrator {
 function Update-Scoop {
     [CmdletBinding()]
     param(
-        [switch]$Force,
         [switch]$NoGlobal
     )
 
@@ -106,7 +95,7 @@ function Update-Scoop {
 
         # 检查 Scoop 状态
         Write-Verbose "检查 Scoop 状态..."
-        $status = scoop status 6>&1
+        $status = scoop status -l 6>&1
         
         # 显示当前状态
         if ($VerbosePreference -eq 'Continue') {
@@ -115,7 +104,7 @@ function Update-Scoop {
         }
 
         # 判断是否需要更新
-        $needsUpdate = $status -notmatch "Everything is ok!" -or $Force
+        $needsUpdate = $status -notmatch "Everything is ok!"
         
         if (-not $needsUpdate) {
             Write-Host "✅ $(Get-Date -Format 'HH:mm:ss') - Scoop 状态正常，无需更新" -ForegroundColor Green
@@ -176,7 +165,7 @@ if (-not (Test-ScoopInstalled)) {
 }
 
 # 执行更新
-$result = Update-Scoop -Force:$Force -NoGlobal:$NoGlobal -Verbose:$VerbosePreference
+$result = Update-Scoop -NoGlobal:$NoGlobal -Verbose:$VerbosePreference
 
 if ($result) {
     Write-Host "`n🎉 Scoop 检查更新完成！" -ForegroundColor Green
