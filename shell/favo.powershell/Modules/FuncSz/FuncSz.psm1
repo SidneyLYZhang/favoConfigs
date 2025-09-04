@@ -1,21 +1,21 @@
-<#
-.SYNOPSIS
-    自动查找并激活当前目录下的 Python 虚拟环境。
-.DESCRIPTION
-    在当前目录（或指定目录）中搜索常见名称的虚拟环境目录，
-    并执行 Activate.ps1。如果找不到，可一键创建。
-.PARAMETER Path
-    在哪个目录中查找虚拟环境，默认为当前目录。
-.PARAMETER VenvDir
-    直接指定虚拟环境目录名称（如 ".venv"）。
-.PARAMETER Force
-    如果虚拟环境已存在，先删除再重新创建。
-.EXAMPLE
-    Enter-Venv
-.EXAMPLE
-    Enter-Venv -VenvDir .venv
-#>
 function Enter-Venv {
+    <#
+    .SYNOPSIS
+        自动查找并激活当前目录下的 Python 虚拟环境。
+    .DESCRIPTION
+        在当前目录（或指定目录）中搜索常见名称的虚拟环境目录，
+        并执行 Activate.ps1。如果找不到，可一键创建。
+    .PARAMETER Path
+        在哪个目录中查找虚拟环境，默认为当前目录。
+    .PARAMETER VenvDir
+        直接指定虚拟环境目录名称（如 ".venv"）。
+    .PARAMETER Force
+        如果虚拟环境已存在，先删除再重新创建。
+    .EXAMPLE
+        Enter-Venv
+    .EXAMPLE
+        Enter-Venv -VenvDir .venv
+    #>
     [CmdletBinding()]
     param(
         [string]$Path = (Get-Location).Path,
@@ -76,16 +76,16 @@ function Enter-Venv {
     Write-Host "已激活虚拟环境：$venvPath" -ForegroundColor Cyan
 }
 
-<#
-.SYNOPSIS
-    退出当前已激活的 Python 虚拟环境。
-.DESCRIPTION
-    如果检测到虚拟环境已激活，则调用 deactivate 函数退出；
-    否则提示无虚拟环境可退出。
-.EXAMPLE
-    Exit-Venv
-#>
 function Exit-Venv {
+    <#
+    .SYNOPSIS
+        退出当前已激活的 Python 虚拟环境。
+    .DESCRIPTION
+        如果检测到虚拟环境已激活，则调用 deactivate 函数退出；
+        否则提示无虚拟环境可退出。
+    .EXAMPLE
+        Exit-Venv
+    #>
     [CmdletBinding()]
     param()
 
@@ -98,42 +98,42 @@ function Exit-Venv {
     }
 }
 
-<#
-.SYNOPSIS
-Generates random API keys similar to OpenAI's format.
-
-.DESCRIPTION
-This function generates cryptographically secure random API keys with optional prefix.
-By default, it generates keys in the format "sk-" followed by 64 random alphanumeric characters.
-
-.PARAMETER Prefix
-The prefix to use for the API key. Default is "sk-".
-
-.PARAMETER Length
-The length of the random part of the API key. Default is 64.
-
-.PARAMETER Count
-The number of API keys to generate. Default is 1.
-
-.PARAMETER NoPrefix
-Switch to generate keys without any prefix.
-
-.EXAMPLE
-New-ApiKey
-Generates a single API key with default settings: "sk-" prefix and 64 random characters.
-
-.EXAMPLE
-New-ApiKey -Length 32 -Count 5
-Generates 5 API keys with "sk-" prefix and 32 random characters each.
-
-.EXAMPLE
-New-ApiKey -NoPrefix -Length 48
-Generates a single 48-character API key with no prefix.
-
-.NOTES
-Uses cryptographically secure random number generation for better security.
-#>
 function New-ApiKey {
+    <#
+    .SYNOPSIS
+    Generates random API keys similar to OpenAI's format.
+
+    .DESCRIPTION
+    This function generates cryptographically secure random API keys with optional prefix.
+    By default, it generates keys in the format "sk-" followed by 64 random alphanumeric characters.
+
+    .PARAMETER Prefix
+    The prefix to use for the API key. Default is "sk-".
+
+    .PARAMETER Length
+    The length of the random part of the API key. Default is 64.
+
+    .PARAMETER Count
+    The number of API keys to generate. Default is 1.
+
+    .PARAMETER NoPrefix
+    Switch to generate keys without any prefix.
+
+    .EXAMPLE
+    New-ApiKey
+    Generates a single API key with default settings: "sk-" prefix and 64 random characters.
+
+    .EXAMPLE
+    New-ApiKey -Length 32 -Count 5
+    Generates 5 API keys with "sk-" prefix and 32 random characters each.
+
+    .EXAMPLE
+    New-ApiKey -NoPrefix -Length 48
+    Generates a single 48-character API key with no prefix.
+
+    .NOTES
+    Uses cryptographically secure random number generation for better security.
+    #>
     [CmdletBinding()]
     param (
         [Parameter(Position = 0)]
@@ -186,29 +186,29 @@ function New-ApiKey {
     }
 }
 
-<#
-.SYNOPSIS
-    为指定目录注册一个全局“跳转函数”，方便在 PowerShell 中快速 cd 到常用路径。
-
-.DESCRIPTION
-    本函数会在当前会话内创建一个全局函数（以 $Name 命名），
-    调用该函数即可立即 Set-Location 到 $Path 指定的目录。
-    若同名函数已存在，可选择覆盖或保留原函数。
-
-.PARAMETER Name
-    要创建的跳转函数名称，需符合 PowerShell 函数命名规范。
-
-.PARAMETER Path
-    目标目录。支持相对路径，最终会被解析为绝对路径。
-
-.PARAMETER Force
-    若同名函数已存在，强制覆盖。
-
-.EXAMPLE
-    Add-JumpFunction -Name proj -Path 'C:\Code\MyProject'
-    proj              # 立即 cd 到 C:\Code\MyProject
-#>
 function Add-JumpFunction {
+    <#
+    .SYNOPSIS
+        为指定目录注册一个全局"跳转函数"，方便在 PowerShell 中快速 cd 到常用路径。
+
+    .DESCRIPTION
+        本函数会在当前会话内创建一个全局函数（以 $Name 命名），
+        调用该函数即可立即 Set-Location 到 $Path 指定的目录。
+        若同名函数已存在，可选择覆盖或保留原函数。
+
+    .PARAMETER Name
+        要创建的跳转函数名称，需符合 PowerShell 函数命名规范。
+
+    .PARAMETER Path
+        目标目录。支持相对路径，最终会被解析为绝对路径。
+
+    .PARAMETER Force
+        若同名函数已存在，强制覆盖。
+
+    .EXAMPLE
+        Add-JumpFunction -Name proj -Path 'C:\Code\MyProject'
+        proj              # 立即 cd 到 C:\Code\MyProject
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -227,91 +227,16 @@ function Add-JumpFunction {
         [switch]$Force
     )
 
-    # 解析为绝对路径，避免相对路径在后续调用时失效
     $resolvedPath = (Resolve-Path $Path).Path
+    $funcPath = "function:\global:$Name"
 
-    # 检查是否已有同名函数
-    if (Test-Path "function:\global:$Name") {
-        if (-not $Force) {
-            Write-Warning "函数 global:$Name 已存在，跳过。如需覆盖请加 -Force。"
-            return
-        }
-        Write-Verbose "函数 global:$Name 已存在，将被覆盖。"
+    if ((Test-Path $funcPath) -and (-not $Force)) {
+        Write-Warning "函数 $Name 已存在，跳过。如需覆盖请加 -Force。"
+        return
     }
 
-    # 利用脚本块动态生成函数体；无需字符串拼接，避免引号转义问题
-    $scriptBlock = {
-        param()
-        Set-Location $args[0]
-    }.GetNewClosure()
-
-    # 创建函数
-    $null = New-Item `
-        -Path "function:\global:$Name" `
-        -Value {
-            param()
-            Set-Location $resolvedPath
-        } `
-        -Force:$Force
-
-    Write-Host "已注册全局函数：global:$Name -> $resolvedPath" -ForegroundColor Green
+    # 使用最简洁的方式创建函数
+    Invoke-Expression "function global:$Name { Set-Location '$resolvedPath' }"
 }
 
-function Update-Scoop {
-    <#
-    .SYNOPSIS
-        检查并更新 Scoop 包管理器
-        
-    .DESCRIPTION
-        检查 Scoop 状态并执行必要的更新操作
-        # 设置函数别名以便快速调用
-        # Set-Alias -Name checkscoop -Value Update-Scoop
-        # Set-Alias -Name scoop-update -Value Update-Scoop
-        
-    .EXAMPLE
-        Update-Scoop
-        
-    .EXAMPLE
-        Update-Scoop -Verbose
-    #>
-    
-    [CmdletBinding()]
-    param()
-    
-    try {
-        Write-Verbose "正在更新 Scoop 仓库信息..."
-        $updateResult = scoop update 2>&1
-        
-        Write-Verbose "检查 Scoop 状态..."
-        $status = scoop status 2>&1
-        
-        if ($status -match "Everything is ok!") {
-            Write-Host "✅ $(Get-Date -Format 'HH:mm:ss') - Scoop 状态正常，无需更新" -ForegroundColor Green
-            return $true
-        } else {
-            Write-Warning "Scoop 需要更新，正在执行全局更新..."
-            
-            # 检查是否在管理员权限下运行
-            if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-                Write-Warning "需要管理员权限执行全局更新，请使用管理员模式运行 PowerShell"
-                return $false
-            }
-            
-            $globalUpdate = scoop update -a -g 2>&1
-            if ($LASTEXITCODE -eq 0) {
-                Write-Host "✅ $(Get-Date -Format 'HH:mm:ss') - Scoop 全局更新完成" -ForegroundColor Green
-                return $true
-            } else {
-                Write-Error "Scoop 更新失败，错误代码: $LASTEXITCODE"
-                Write-Error $globalUpdate
-                return $false
-            }
-        }
-    }
-    catch {
-        Write-Error "执行 Scoop 检查时发生错误: $($_.Exception.Message)"
-        return $false
-    }
-}
-
-Export-ModuleMember -Function Enter-Venv, Exit-Venv, New-ApiKey, Add-JumpFunction, Update-Scoop
+Export-ModuleMember -Function Enter-Venv, Exit-Venv, New-ApiKey, Add-JumpFunction

@@ -4,56 +4,160 @@ Invoke-Expression (&starship init powershell)
 $env:Path += ";\WorkPlace\...\dosync"
 
 # Function
-#### 快速设置软链接
+#### 快速设置软链接 - 创建符号链接工具
 function setsymlink {
+    <#
+    .SYNOPSIS
+        创建符号链接（软链接）工具
+    
+    .DESCRIPTION
+        创建指向目标文件或目录的符号链接。支持文件和目录链接，提供强制覆盖选项。
+    
+    .PARAMETER name
+        要创建的符号链接名称（可以是相对或绝对路径）
+    
+    .PARAMETER target
+        目标文件或目录的完整路径
+    
+    .PARAMETER force
+        如果链接名称已存在，强制删除并重新创建
+    
+    .PARAMETER verbose
+        显示详细的操作过程信息
+    
+    .EXAMPLE
+        setsymlink mylink "C:\path\to\target"
+        创建名为 mylink 的符号链接指向目标路径
+    
+    .EXAMPLE
+        setsymlink .config "C:\Users\user\.config" -force -verbose
+        强制重新创建 .config 链接并显示详细过程
+    
+    .NOTES
+        需要管理员权限才能创建符号链接
+        支持相对路径和绝对路径
+        自动识别目标是文件还是目录
+    #>
+    [CmdletBinding(SupportsShouldProcess=$true)]
     param(
-        [Parameter(Mandatory=$true, Position=0)]
+        [Parameter(Mandatory=$true, Position=0, HelpMessage="符号链接名称")]
+        [ValidateNotNullOrEmpty()]
         [string]$name,
-        [Parameter(Mandatory=$true, Position=1)]
+        
+        [Parameter(Mandatory=$true, Position=1, HelpMessage="目标文件或目录路径")]
+        [ValidateNotNullOrEmpty()]
         [string]$target,
-        [switch]$force,
-        [switch]$verbose
+        
+        [Alias("f")]
+        [switch]$force
     )
     
-    try {
-        # 检查目标路径是否存在
-        if (-not (Test-Path $target)) {
-            Write-Error "目标路径不存在: $target"
-            return $false
-        }
+    begin {
+        # 将相对路径转换为绝对路径
+        $name = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($name)
+        $target = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($target)
         
-        # 如果已存在同名文件/文件夹，根据-force参数决定是否删除
-        if (Test-Path $name) {
-            if ($force) {
-                if ($verbose) { Write-Host "已存在，正在删除: $name" -ForegroundColor Yellow }
-                Remove-Item -Path $name -Recurse -Force
-            } else {
-                Write-Error "已存在同名文件/文件夹: $name (使用 -force 参数覆盖)"
-                return $false
+        if ($verbose) {
+            Write-Host "设置符号链接:" -ForegroundColor Cyan
+            Write-Host "  链接名称: $name" -ForegroundColor White
+            Write-Host "  目标路径: $target" -ForegroundColor White
+        }
+    }
+    
+    process {
+        try {
+            # 检查目标路径是否存在
+            if (-not (Test-Path $target)) {
+                Write-Error "❌ 目标路径不存在: $target"
+            }
+            
+            # 获取目标类型（文件或目录）
+            $targetItem = Get-Item $target
+            $itemType = if ($targetItem.PSIsContainer) { "目录" } else { "文件" }
+            
+            if ($verbose) {
+                Write-Host "  目标类型: $itemType" -ForegroundColor Gray
+            }
+            
+            # 检查是否已存在同名文件/文件夹/链接
+            if (Test-Path $name) {
+                $existingItem = Get-Item $name
+                
+                # 检查是否已经是符号链接
+                if ($existingItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+                    $existingTarget = $existingItem.Target
+                    if ($existingTarget -eq $target) {
+                        Write-Host "✅ 符号链接已存在且指向正确目标" -ForegroundColor Green
+                    } else {
+                        Write-Host "⚠️  符号链接已存在但指向不同目标:" -ForegroundColor Yellow
+                        Write-Host "   当前目标: $existingTarget" -ForegroundColor Yellow
+                        Write-Host "   新目标:   $target" -ForegroundColor Yellow
+                    }
+                }
+                
+                if ($force) {
+                    if ($PSCmdlet.ShouldProcess($name, "删除现有项目并创建符号链接")) {
+                        Write-Host "🔄 删除现有项目: $name" -ForegroundColor Yellow
+                        Remove-Item -Path $name -Recurse -Force -ErrorAction Stop
+                    }
+                } else {
+                    Write-Error "❌ 已存在同名项目: $name (使用 -force 参数覆盖)"
+                }
+            }
+            
+            # 确保父目录存在
+            $parentDir = Split-Path -Path $name -Parent
+            if (-not (Test-Path $parentDir)) {
+                if ($PSCmdlet.ShouldProcess($parentDir, "创建父目录")) {
+                    New-Item -Path $parentDir -ItemType Directory -Force | Out-Null
+                    if ($verbose) {
+                        Write-Host "📁 创建父目录: $parentDir" -ForegroundColor Gray
+                    }
+                }
+            }
+            
+            # 创建符号链接
+            if ($PSCmdlet.ShouldProcess("$name -> $target", "创建符号链接")) {
+                if ($verbose) {
+                    Write-Host "🔗 创建符号链接: $name -> $target" -ForegroundColor Green
+                }
+                
+                New-Item -Path $name -ItemType SymbolicLink -Target $target -Force -ErrorAction Stop
+                
+                # 验证创建结果
+                if (Test-Path $name) {
+                    $newLink = Get-Item $name
+                    if ($newLink.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+                        Write-Host "✅ 符号链接创建成功" -ForegroundColor Green
+                        
+                        # 显示链接信息
+                        if ($verbose) {
+                            $linkInfo = Get-Item $name
+                            Write-Host "   链接类型: $(if ($linkInfo.PSIsContainer) {'目录链接'} else {'文件链接'})" -ForegroundColor Gray
+                            Write-Host "   创建时间: $($linkInfo.CreationTime)" -ForegroundColor Gray
+                        }
+                    } else {
+                        Write-Error "❌ 创建的项目不是符号链接"
+                    }
+                } else {
+                    Write-Error "❌ 符号链接创建失败: 链接未找到"
+                }
             }
         }
-        
-        # 创建符号链接
-        if ($verbose) { Write-Host "正在创建符号链接: $name -> $target" -ForegroundColor Green }
-        $result = New-Item -Path $name -ItemType SymbolicLink -Target $target -Force
-        
-        if ($verbose) { Write-Host "成功创建符号链接" -ForegroundColor Green }
-        return $true
+        catch [System.UnauthorizedAccessException] {
+            Write-Error "❌ 权限不足: 需要以管理员身份运行 PowerShell"
+            Write-Host "💡 提示: 右键点击 PowerShell 图标，选择\"以管理员身份运行\"" -ForegroundColor Cyan
+        }
+        catch {
+            Write-Error "❌ 创建符号链接失败: $($_.Exception.Message)"
+            Write-Host "💡 提示: 确保目标路径有效，且有足够权限" -ForegroundColor Cyan
+        }
     }
-    catch {
-        Write-Error "创建符号链接失败: $($_.Exception.Message)"
-        return $false
-    }
-}
-
-#### Scoop检查并更新
-function checkscoop {
-    scoop update
-    $xx = scoop status | Select-String "Everything is ok!"
-    if ($xx) {
-        Write-Host "$([char]0x1b)[35;1mEverything of scoop is ok!$([char]0x1b)[0m"
-    } else {
-        sudo scoop update -a -g
+    
+    end {
+        if ($verbose) {
+            Write-Host "操作完成" -ForegroundColor Cyan
+        }
     }
 }
 
@@ -256,84 +360,31 @@ function Sync {
     Write-Host "DOC : https://restic.readthedocs.io/en/stable/index.html"
 }
 
-#### 快速打开文件夹
-
-# 打开代码文件夹
-function Quickopen-Code {
-    explorer 'E:\WorkPlace\00_Coding'
+#### 打开一个管理员级别的Windows Terminal标签页
+function Start-AdminTab {
+    sudo wt new-tab
 }
 
-# 打开下载文件夹
-function Open-Download {
-    explorer 'D:\Downloads'
-}
-
-# 打开YouTube月报文件夹
-function Quickopen-Youtube {
+function Add-JumpFunction {
     param(
-        [string]$ziel = "data"
+        [string]$Name,
+        [string]$Path
     )
-    $lmonth = (Get-Date -Format "yyyy-MM-01" | Get-Date).AddDays(-1).ToString("yyyyMM")
-    $keypath = "E:\WorkPlace\01_WORKING\03_YouTube"
-    if ($ziel -in @("data", "Report")) {
-        explorer (Join-Path $keypath $ziel $lmonth)
-    } else {
-        explorer 'E:\WorkPlace\01_WORKING\03_YouTube\'
+    
+    $functionDef = @"
+    function global:$Name {
+        Set-Location '$Path'
     }
+"@
+    Invoke-Expression $functionDef
 }
 
-# 打开结算文件夹
-function Quickopen-Jiesuan {
-    param(
-        [string]$ziel = "y2b",
-        [switch]$ok
-    )
-    $lmonth = (Get-Date -Format "yyyy-MM-01" | Get-Date).AddDays(-1).ToString("yyyyMM")
-    $tmonth = Get-Date -Format "yyyyMM"
-    $keypath = "E:\WorkPlace\01_WORKING\04_Settlements"
-    if ($ziel -in @("y2b", "YSP")) {
-        if ($ziel -eq "y2b") {
-            if ($ok) {
-                explorer (Join-Path $keypath "data" $lmonth)
-            } else {
-                explorer (Join-Path $keypath "data" "YouTube" $lmonth)
-            }
-        } else {
-            if ($ok) {
-                explorer (Join-Path $keypath "央视频" $tmonth)
-            } else {
-                explorer (Join-Path $keypath "央视频")
-            }
-        }
-    } elseif ($ziel -in @("steam", "epic")) {
-        explorer (Join-Path $keypath "data" ($ziel.ToUpper()))
-    } else {
-        explorer 'E:\WorkPlace\01_WORKING\04_Settlements'
-    }
-}
-
-# 常用文件夹快捷打开工具
-function Quickopen {
-    param(
-        [switch]$info
-    )
-    if ($info) {
-        Write-Host "qopen ::"
-        Write-Host "`t -> `qopen` | 打开当前文件夹"
-        Write-Host "`t -> `qopen-code` | 打开代码文件夹"
-        Write-Host "`t -> `qopen-download` | 打开下载文件夹"
-        Write-Host "`t -> `qopen-jiesuan [y2b，YSP，steam，epic]` | 打开结算工作文件夹"
-        Write-Host "`t -> `qopen-youtube [data,Report,null]` | 打开当月youtube月报文件夹"
-        Write-Host "`t -> `qopen --help` | 显示帮助"
-        Write-Host "`t -> `qopen --info(-i)` | 显示基本信息"
-        Write-Host "`n Version 20250416 (C) SidneyZhang<zly@lyzhang.me>"
-    } else {
-        explorer .
-    }
-}
+# 定义路径
+Add-JumpFunction -Name "coding" -Path "E:\WorkPlace\00_CODING"
+Add-JumpFunction -Name "work" -Path "E:\WorkPlace\01_WORKING"
+Add-JumpFunction -Name "download" -Path "D:\Downloads"
+Add-JumpFunction -Name "mygit" -Path "L:\gitcoding"
 
 # Alias
-Set-Alias -Name work -Value "cd 'E:\WorkPlace\01_Working'"
-Set-Alias -Name coding -Value "cd 'E:\WorkPlace\00_Coding'"
-Set-Alias -Name appdata -Value "cd 'C:\Users\<you>\AppData'"
+Set-Alias -Name admintab -Value Start-AdminTab
 Set-Alias -Name weeknum -Value { Write-Host (Get-Date -Format "%W") }
