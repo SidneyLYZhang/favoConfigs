@@ -45,3 +45,4 @@ scoop config rm proxy
 12. cmake & msys2: 编译工具。
 13. aria2: 下载工具，也超好用。
 14. sumatrapdf: 多种格式的阅读器，体积小、功能简单好用。
+15. [chsrc](https://github.com/RubyMetric/chsrc)： 切换源的工具，方便快速解决源的问题。相比Rust的crm，这个可以解决更多的软件源的选择。
