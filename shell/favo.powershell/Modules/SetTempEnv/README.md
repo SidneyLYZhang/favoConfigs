@@ -21,11 +21,14 @@
    - 所有用户: `$PSHOME\Modules\`
 3. 在 PowerShell 中运行：`Import-Module SetTempEnv`
 
-### 自动安装
+安装示例：
 
 ```powershell
 # 克隆仓库
-git clone https://github.com/yourusername/SetTempEnv.git
+git clone https://github.com/sidneylyzhang/favoConfigs.git
+
+# 切换到 Modules 目录
+cd favoConfigs/shell/favo.powershell/Modules
 
 # 复制到模块目录
 Copy-Item -Path ".\SetTempEnv" -Destination "$HOME\Documents\PowerShell\Modules\" -Recurse -Force
@@ -229,10 +232,6 @@ Get-TempEnv -Name "YOUR_VAR"
 # 使用通配符时要小心
 Remove-TempEnv -Name "TEMP_*" -WhatIf  # 先预览
 ```
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request！
 
 ## 许可证
 
