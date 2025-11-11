@@ -395,4 +395,209 @@ function Set-Symlink {
     }
 }
 
-Export-ModuleMember -Function Enter-Venv, Exit-Venv, New-ApiKey, Add-JumpFunction, Set-Symlink
+function Start-Shortcut {
+    <#
+    .SYNOPSIS
+        启动快捷方式 (.lnk) 对应的目标程序或打开目标文件夹
+    
+    .DESCRIPTION
+        读取 Windows 快捷方式文件 (.lnk) 的目标路径，并启动对应的程序或打开文件夹
+        支持自定义工作目录、参数传递，以及以管理员身份运行
+    
+    .PARAMETER ShortcutPath
+        快捷方式文件的路径（可省略 .lnk 扩展名）
+    
+    .PARAMETER WorkingDirectory
+        指定工作目录（可选，默认使用快捷方式的工作目录）
+    
+    .PARAMETER Arguments
+        传递给目标程序的额外参数
+    
+    .PARAMETER RunAsAdmin
+        以管理员身份运行程序
+    
+    .PARAMETER OpenFolder
+        如果目标是文件夹，直接打开文件夹而不是切换到该目录
+    
+    .EXAMPLE
+        Start-Shortcut myapp
+        启动 myapp.lnk 指向的程序
+    
+    .EXAMPLE
+        Start-Shortcut "C:\shortcuts\dev.lnk" -Arguments "--debug"
+        启动快捷方式并传递调试参数
+    
+    .EXAMPLE
+        Start-Shortcut myfolder -OpenFolder
+        打开 myfolder.lnk 指向的文件夹
+    
+    .EXAMPLE
+        Start-Shortcut editor -RunAsAdmin
+        以管理员身份启动编辑器
+    
+    .NOTES
+        支持相对路径和绝对路径
+        自动补全 .lnk 扩展名
+        智能处理文件和目录目标
+    #>
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    param(
+        [Parameter(Mandatory = $true, Position = 0, HelpMessage = "快捷方式路径")]
+        [ValidateNotNullOrEmpty()]
+        [string]$ShortcutPath,
+        
+        [Parameter(Position = 1, HelpMessage = "工作目录")]
+        [string]$WorkingDirectory,
+        
+        [Parameter(Position = 2, HelpMessage = "额外参数")]
+        [string]$Arguments,
+        
+        [Alias("Admin", "Elevated")]
+        [switch]$RunAsAdmin,
+        
+        [Alias("Open", "Explore")]
+        [switch]$OpenFolder
+    )
+    
+    begin {
+        # 规范化路径处理
+        if (-not $ShortcutPath.EndsWith('.lnk')) {
+            $ShortcutPath += '.lnk'
+        }
+        
+        # 转换为绝对路径（支持相对路径）
+        $ShortcutPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($ShortcutPath)
+        
+        Write-Verbose "正在解析快捷方式: $ShortcutPath"
+    }
+    
+    process {
+        try {
+            if (-not (Test-Path $ShortcutPath)) {
+                Write-Error "❌ 快捷方式不存在: $ShortcutPath"
+                return
+            }
+            
+            # 创建 COM 对象并读取快捷方式信息
+            $shell = New-Object -COM WScript.Shell -ErrorAction Stop
+            $shortcut = $shell.CreateShortcut($ShortcutPath)
+            
+            $targetPath = $shortcut.TargetPath
+            $shortcutArgs = $shortcut.Arguments
+            $shortcutWorkingDir = $shortcut.WorkingDirectory
+            
+            Write-Verbose "快捷方式目标: $targetPath"
+            Write-Verbose "快捷方式参数: $shortcutArgs"
+            Write-Verbose "快捷方式工作目录: $shortcutWorkingDir"
+            
+            if ([string]::IsNullOrEmpty($targetPath)) {
+                Write-Error "❌ 快捷方式目标路径为空"
+                return
+            }
+            
+            if (-not (Test-Path $targetPath)) {
+                Write-Error "❌ 快捷方式目标路径不存在: $targetPath"
+                return
+            }
+            
+            # 获取目标项目的类型信息
+            $targetItem = Get-Item $targetPath -ErrorAction SilentlyContinue
+            if ($null -eq $targetItem) {
+                Write-Error "❌ 无法访问目标路径: $targetPath"
+                return
+            }
+            
+            # 确定工作目录
+            $finalWorkingDir = if ($PSBoundParameters.ContainsKey('WorkingDirectory')) {
+                $WorkingDirectory
+            } elseif (-not [string]::IsNullOrEmpty($shortcutWorkingDir)) {
+                $shortcutWorkingDir
+            } else {
+                if ($targetItem.PSIsContainer) {
+                    $targetPath
+                } else {
+                    Split-Path -Path $targetPath -Parent
+                }
+            }
+            
+            # 组合参数
+            $finalArguments = if ($PSBoundParameters.ContainsKey('Arguments')) {
+                if (-not [string]::IsNullOrEmpty($shortcutArgs)) {
+                    "$shortcutArgs $Arguments"
+                } else {
+                    $Arguments
+                }
+            } else {
+                $shortcutArgs
+            }
+            
+            # 根据目标类型和参数决定操作
+            if ($targetItem.PSIsContainer -and $OpenFolder) {
+                # 打开文件夹
+                if ($PSCmdlet.ShouldProcess($targetPath, "打开文件夹")) {
+                    Write-Verbose "正在打开文件夹: $targetPath"
+                    Start-Process explorer.exe -ArgumentList "/select,`"$targetPath`"" -Wait:$false
+                    Write-Host "📁 已打开文件夹: $targetPath" -ForegroundColor Green
+                }
+            }
+            elseif ($targetItem.PSIsContainer) {
+                # 切换到目录
+                if ($PSCmdlet.ShouldProcess($targetPath, "切换到目录")) {
+                    Write-Verbose "正在切换到目录: $targetPath"
+                    Set-Location $targetPath
+                    Write-Host "📂 已切换到目录: $targetPath" -ForegroundColor Green
+                }
+            }
+            else {
+                # 启动程序
+                if ($PSCmdlet.ShouldProcess($targetPath, "启动程序")) {
+                    Write-Verbose "正在启动程序: $targetPath"
+                    
+                    $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+                    $startInfo.FileName = $targetPath
+                    $startInfo.Arguments = $finalArguments
+                    $startInfo.WorkingDirectory = $finalWorkingDir
+                    $startInfo.UseShellExecute = $true
+                    
+                    if ($RunAsAdmin) {
+                        $startInfo.Verb = "runas"
+                        Write-Verbose "以管理员身份运行"
+                    }
+                    
+                    [System.Diagnostics.Process]::Start($startInfo) | Out-Null
+                    
+                    $action = if ($RunAsAdmin) { "以管理员身份启动" } else { "启动" }
+                    Write-Host "🚀 $action 程序: $([System.IO.Path]::GetFileName($targetPath))" -ForegroundColor Green
+                    
+                    if (-not [string]::IsNullOrEmpty($finalArguments)) {
+                        Write-Host "📄 参数: $finalArguments" -ForegroundColor Gray
+                    }
+                    
+                    if ($finalWorkingDir -ne (Get-Location).Path) {
+                        Write-Host "📍 工作目录: $finalWorkingDir" -ForegroundColor Gray
+                    }
+                }
+            }
+        }
+        catch [System.Runtime.InteropServices.COMException] {
+            Write-Error "❌ 无法读取快捷方式文件，请确保文件格式正确"
+        }
+        catch [System.UnauthorizedAccessException] {
+            Write-Error "❌ 权限不足，无法访问快捷方式或目标路径"
+        }
+        catch [System.InvalidOperationException] {
+            Write-Error "❌ 无法启动程序，可能需要管理员权限"
+        }
+        catch {
+            Write-Error "❌ 发生错误: $($_.Exception.Message)"
+        }
+        finally {
+            # 清理 COM 对象
+            if ($null -ne $shell) {
+                [System.Runtime.Interopservices.Marshal]::ReleaseComObject($shell) | Out-Null
+            }
+        }
+    }
+}
+
+Export-ModuleMember -Function Enter-Venv, Exit-Venv, New-ApiKey, Add-JumpFunction, Set-Symlink, Start-Shortcut

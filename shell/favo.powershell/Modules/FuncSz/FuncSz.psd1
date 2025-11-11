@@ -12,7 +12,8 @@
         'Exit-Venv',
         'New-ApiKey',
         'Add-JumpFunction',
-        'Set-Symlink'
+        'Set-Symlink',
+        'Start-Shortcut'
     )
     CmdletsToExport = @()
     VariablesToExport = @()
@@ -27,7 +28,8 @@
             - Exit-Venv: 退出当前虚拟环境
             - New-ApiKey: 生成随机API密钥
             - Add-JumpFunction: 创建目录跳转函数
-            - Set-Symlink: 创建符号链接工具'
+            - Set-Symlink: 创建符号链接工具
+            - Start-Shortcut: 打开快捷方式 (.lnk)'
         }
     }
 }

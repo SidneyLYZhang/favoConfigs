@@ -1,132 +1,87 @@
-<#
-.SYNOPSIS
-    批量设置/取消常用开发工具的 HTTP(S) 代理。
-
-.DESCRIPTION
-    内置 git、scoop、npm、yarn；
-    同时支持 HTTP 和 HTTPS 代理设置；
-    同时允许自定义任意新工具。
-    默认代理 127.0.0.1:7890，可通过 -Proxy 修改。
-
-.PARAMETER Tool
-    要配置的工具名，支持数组；内置工具直接写名字即可，
-    自定义工具需同时给出 -SetCmd 与 -UnsetCmd。
-
-.PARAMETER Proxy
-    代理地址，缺省为 http://127.0.0.1:7890
-    支持格式：http://host:port 或 https://host:port
-
-.PARAMETER HttpsProxy
-    HTTPS 代理地址，如果不指定则使用与 HTTP 代理相同的地址
-
-.PARAMETER Unset
-    如果给出该开关，则取消代理；否则设置代理。
-
-.PARAMETER SetCmd
-    仅对"自定义工具"有效：设置代理时要执行的命令模板。
-    支持占位符：{proxy}、{http_proxy}、{https_proxy}
-    例如："mycli config proxy.url {proxy}"
-
-.PARAMETER UnsetCmd
-    仅对"自定义工具"有效：取消代理时要执行的命令。
-
-.PARAMETER ListSupported
-    列出所有支持的内置工具
-
-.EXAMPLE
-    Set-ToolProxy git npm scoop cargo    # 一键设置所有工具代理
-
-.EXAMPLE
-    Set-ToolProxy scoop -u               # 取消 scoop 代理
-
-.EXAMPLE
-    Set-ToolProxy git -Proxy http://proxy.lan:8080
-
-.EXAMPLE
-    Set-ToolProxy cargo -HttpsProxy https://proxy.lan:8443
-
-.EXAMPLE
-    Set-ToolProxy mytool -SetCmd "mytool config http.proxy {http_proxy} && mytool config https.proxy {https_proxy}" `
-                         -UnsetCmd "mytool config --unset http.proxy && mytool config --unset https.proxy"
-#>
 function Set-ToolProxy {
-    [CmdletBinding(DefaultParameterSetName = 'SetProxy')]
+    [CmdletBinding(DefaultParameterSetName = 'Default')]
     param(
-        [Parameter(Mandatory, Position = 0, ParameterSetName = 'SetProxy')]
+        [Parameter(Position = 0, Mandatory = $true)]
         [string[]]$Tool,
-
-        [Parameter(ParameterSetName = 'ListSupported')]
-        [switch]$ListSupported,
-
-        [string]$Proxy = 'http://127.0.0.1:7890',
-
+        
+        [Parameter(Position = 1)]
+        [string]$Proxy = "http://127.0.0.1:7890",
+        
+        [Parameter(Position = 2)]
         [string]$HttpsProxy,
-
-        [Alias('u')]
+        
+        [Parameter()]
+        [switch]$ListSupported,
+        
+        [Parameter()]
         [switch]$Unset,
-
-        [string]$SetCmd,   # 仅自定义工具时有效
-        [string]$UnsetCmd  # 仅自定义工具时有效
+        
+        [Parameter(ParameterSetName = 'Custom')]
+        [string]$SetCmd,
+        
+        [Parameter(ParameterSetName = 'Custom')]
+        [string]$UnsetCmd
     )
 
-    # 如果没有指定 HTTPS 代理，则使用与 HTTP 代理相同的地址
+    # 内置工具配置表
+    $builtin = @{
+        git = @{
+            Set = @{
+                http  = "git config --global http.proxy `$Proxy"
+                https = "git config --global https.proxy `$HttpsProxy"
+            }
+            Unset = @{
+                http  = "git config --global --unset http.proxy"
+                https = "git config --global --unset https.proxy"
+            }
+            Note = "Git 会分别设置 http 和 https 代理"
+        }
+        scoop = @{
+            Set = @{
+                default = "scoop config proxy `$Proxy"
+            }
+            Unset = @{
+                default = "scoop config rm proxy"
+            }
+            Note = "Scoop 使用单一代理设置"
+        }
+        npm = @{
+            Set = @{
+                http  = "npm config set proxy `$Proxy"
+                https = "npm config set https-proxy `$HttpsProxy"
+            }
+            Unset = @{
+                http  = "npm config rm proxy"
+                https = "npm config rm https-proxy"
+            }
+            Note = "npm 会分别设置 http 和 https 代理"
+        }
+        yarn = @{
+            Set = @{
+                http  = "yarn config set proxy `$Proxy"
+                https = "yarn config set https-proxy `$HttpsProxy"
+            }
+            Unset = @{
+                http  = "yarn config rm proxy"
+                https = "yarn config rm https-proxy"
+            }
+            Note = "Yarn 会分别设置 http 和 https 代理"
+        }
+    }
+
+    # 如果未指定 HttpsProxy，使用与 Proxy 相同的值
     if ([string]::IsNullOrEmpty($HttpsProxy)) {
         $HttpsProxy = $Proxy
     }
 
-    # 内置工具的配置表 - 支持 HTTP 和 HTTPS 代理
-    $builtin = @{
-        git = @{
-            Set = @{
-                http  = "git config --global http.proxy $Proxy"
-                https = "git config --global https.proxy $HttpsProxy"
-            }
-            Unset = @{
-                http  = 'git config --global --unset http.proxy'
-                https = 'git config --global --unset https.proxy'
-            }
-            Description = 'Git 版本控制系统'
-        }
-        scoop = @{
-            Set = @{
-                default = "scoop config proxy $Proxy"
-            }
-            Unset = @{
-                default = 'scoop config rm proxy'
-            }
-            Description = 'Windows 包管理器'
-        }
-        npm = @{
-            Set = @{
-                http  = "npm config set proxy $Proxy"
-                https = "npm config set https-proxy $HttpsProxy"
-            }
-            Unset = @{
-                http  = 'npm config delete proxy'
-                https = 'npm config delete https-proxy'
-            }
-            Description = 'Node.js 包管理器'
-        }
-        yarn = @{
-            Set = @{
-                http  = "yarn config set proxy $Proxy"
-                https = "yarn config set https-proxy $HttpsProxy"
-            }
-            Unset = @{
-                http  = 'yarn config delete proxy'
-                https = 'yarn config delete https-proxy'
-            }
-            Description = 'Yarn 包管理器'
-        }
-    }
-
-    # 如果请求列出支持的工具
+    # 处理 -ListSupported 参数
     if ($ListSupported) {
-        Write-Host "`n支持的内置工具：" -ForegroundColor Cyan
+        Write-Host "`n支持的工具列表：" -ForegroundColor Cyan
         Write-Host ("=" * 50)
         foreach ($toolName in ($builtin.Keys | Sort-Object)) {
-            $desc = $builtin[$toolName].Description
-            $note = if ($builtin[$toolName].Note) { " (" + $builtin[$toolName].Note + ")" } else { "" }
+            $tool = $builtin[$toolName]
+            $desc = $tool.Note ?? "支持代理设置"
+            $note = if ($tool.Set.default) { " (命令行)" } elseif ($tool.Set.env) { " (环境变量)" } else { "" }
             Write-Host "  $toolName" -ForegroundColor Green -NoNewline
             Write-Host " - $desc$note"
         }
@@ -163,7 +118,15 @@ function Set-ToolProxy {
                     # 设置代理
                     if ($toolConfig.Set.default) {
                         if ($toolConfig.Set.default -is [string]) {
-                            Invoke-Expression $toolConfig.Set.default
+                            # 针对 scoop 的特殊处理：移除协议前缀
+                            if ($t -eq 'scoop') {
+                                $proxyValue = $Proxy -replace '^https?://', ''
+                                $command = "scoop config proxy $proxyValue"
+                                Invoke-Expression $command
+                            }
+                            else {
+                                Invoke-Expression $toolConfig.Set.default
+                            }
                         }
                     }
                     elseif ($toolConfig.Set.http) {
@@ -175,7 +138,8 @@ function Set-ToolProxy {
                     elseif ($toolConfig.Set.env) {
                         # 设置环境变量
                         foreach ($envVar in $toolConfig.Set.env.Keys) {
-                            [Environment]::SetEnvironmentVariable($envVar, $toolConfig.Set.env[$envVar], 'User')
+                            $value = $toolConfig.Set.env[$envVar] -f $Proxy, $HttpsProxy
+                            [Environment]::SetEnvironmentVariable($envVar, $value, 'User')
                         }
                     }
                 }
@@ -212,22 +176,6 @@ function Set-ToolProxy {
     }
 }
 
-<#
-.SYNOPSIS
-    显示当前已配置的代理设置。
-
-.DESCRIPTION
-    检查常用开发工具的当前代理配置状态。
-
-.PARAMETER Tool
-    要检查的工具名，如果不指定则检查所有支持的工具。
-
-.EXAMPLE
-    Get-ToolProxy
-
-.EXAMPLE
-    Get-ToolProxy git npm
-#>
 function Get-ToolProxy {
     [CmdletBinding()]
     param(
@@ -324,8 +272,8 @@ function Get-EnvProxy {
             EnvVars = @('HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy')
             Note = '支持大小写不敏感的环境变量检测'
         }
-        alen = @{
-            Description = 'Alen 包管理器'
+        elan = @{
+            Description = 'Lean4 elan 包管理器'
             EnvVars = @('HTTP_PROXY', 'HTTPS_PROXY')
             Note = '自动检测 HTTP_PROXY 和 HTTPS_PROXY 环境变量'
         }
